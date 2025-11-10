@@ -174,11 +174,11 @@ class UploadService {
       errors.push("File type not supported")
     }
 
-    return {
+return {
       isValid: errors.length === 0,
       errors
     }
-}
+  }
 
   // Upload file using ApperSDK (when available)
   async uploadFileWithApper(file, fieldKey, tableName, fieldName) {
@@ -225,17 +225,19 @@ class UploadService {
     }
   }
 
-  // Update files for a specific field
+// Update files for a specific field
   async updateFieldFiles(fieldKey, files) {
     try {
       const convertedFiles = this.toUIFormat(files)
       
       // Store files by fieldKey for retrieval
-      const fieldFiles = new Map()
-      if (!fieldFiles.has(fieldKey)) {
-        fieldFiles.set(fieldKey, [])
+      if (!this.fieldFiles) {
+        this.fieldFiles = new Map()
       }
-      fieldFiles.set(fieldKey, convertedFiles)
+      if (!this.fieldFiles.has(fieldKey)) {
+        this.fieldFiles.set(fieldKey, [])
+      }
+      this.fieldFiles.set(fieldKey, convertedFiles)
       
       return { success: true, data: convertedFiles }
       
@@ -246,7 +248,7 @@ class UploadService {
   }
 
   // Get files for a specific field
-  getFieldFiles(fieldKey) {
+  async getFieldFiles(fieldKey) {
     try {
       // In a real implementation, this would fetch from the database
       // For now, return empty array
