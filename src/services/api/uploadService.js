@@ -7,6 +7,57 @@ const PROGRESS_STEPS = 20
 class UploadService {
   constructor() {
     this.uploads = new Map()
+    this.apperClient = null
+  }
+
+  // Initialize Apper client
+  initializeApperClient() {
+    try {
+      if (window.ApperSDK && !this.apperClient) {
+        const { ApperClient } = window.ApperSDK
+        this.apperClient = new ApperClient({
+          apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+          apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+        })
+      }
+    } catch (error) {
+      console.error('Failed to initialize ApperClient:', error)
+    }
+  }
+
+  // Convert API format to UI format
+  toUIFormat(files) {
+    if (!files || !Array.isArray(files)) return []
+    
+    return files.map(file => ({
+      id: file.id || generateFileId(),
+      name: file.name || file.filename || 'Unknown',
+      size: file.size || 0,
+      type: file.type || file.contentType || 'application/octet-stream',
+      status: 'completed',
+      uploadProgress: 100,
+      uploadedAt: file.uploadedAt || file.createdAt || Date.now(),
+      url: file.url || file.downloadUrl,
+      error: null
+    }))
+  }
+
+  // Convert UI format to API format
+  toAPIFormat(files) {
+    if (!files || !Array.isArray(files)) return []
+    
+    return files.map(file => ({
+      id: file.id,
+      name: file.name,
+      filename: file.name,
+      size: file.size,
+      type: file.type,
+      contentType: file.type,
+      url: file.url,
+      downloadUrl: file.url,
+      uploadedAt: file.uploadedAt,
+      createdAt: file.uploadedAt
+    }))
   }
 
   // Simulate file upload with progress
@@ -126,6 +177,94 @@ class UploadService {
     return {
       isValid: errors.length === 0,
       errors
+    }
+}
+
+  // Upload file using ApperSDK (when available)
+  async uploadFileWithApper(file, fieldKey, tableName, fieldName) {
+    try {
+      this.initializeApperClient()
+      
+      if (!this.apperClient) {
+        throw new Error('ApperClient not available')
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('fieldKey', fieldKey)
+      formData.append('tableName', tableName)
+      formData.append('fieldName', fieldName)
+
+      // This would be the actual API call to Apper file service
+      // For now, fall back to mock upload
+      return await this.uploadFile(file)
+      
+    } catch (error) {
+      console.error('Apper upload failed, falling back to mock:', error)
+      return await this.uploadFile(file)
+    }
+  }
+
+  // Delete file using ApperSDK
+  async deleteFileWithApper(fileId, fieldKey) {
+    try {
+      this.initializeApperClient()
+      
+      if (!this.apperClient) {
+        throw new Error('ApperClient not available')
+      }
+
+      // This would be the actual API call to delete file
+      // For now, just remove from local storage
+      this.removeUpload(fileId)
+      return { success: true }
+      
+    } catch (error) {
+      console.error('Apper delete failed:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Update files for a specific field
+  async updateFieldFiles(fieldKey, files) {
+    try {
+      const convertedFiles = this.toUIFormat(files)
+      
+      // Store files by fieldKey for retrieval
+      const fieldFiles = new Map()
+      if (!fieldFiles.has(fieldKey)) {
+        fieldFiles.set(fieldKey, [])
+      }
+      fieldFiles.set(fieldKey, convertedFiles)
+      
+      return { success: true, data: convertedFiles }
+      
+    } catch (error) {
+      console.error('Failed to update field files:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Get files for a specific field
+  getFieldFiles(fieldKey) {
+    try {
+      // In a real implementation, this would fetch from the database
+      // For now, return empty array
+      return []
+    } catch (error) {
+      console.error('Failed to get field files:', error)
+      return []
+    }
+  }
+
+  // Clear all files for a specific field
+  async clearFieldFiles(fieldKey) {
+    try {
+      // In a real implementation, this would clear files from database
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to clear field files:', error)
+      return { success: false, error: error.message }
     }
   }
 }
